@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+
+# Install required packages
+pip install django python-dotenv adif-io
+pip freeze > requirements.txt
+
+# Set environment variables
+export DJANGO_SETTINGS_MODULE=flew.settings
+
+# Initialize database
+python manage.py makemigrations
+python manage.py migrate
+
+# Create superuser (follow prompts)
+python manage.py createsuperuser
+
+# Run development server
+python manage.py runserver 

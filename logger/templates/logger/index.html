@@ -1,0 +1,128 @@
+{% extends "logger/base.html" %}
+
+{% block extra_css %}
+<style>
+    #inputArea, #adifOutput {
+        font-family: monospace;
+        min-height: 300px;
+    }
+    .default-values {
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Ham Radio Contact Logger</h1>
+    
+    {% if user.is_authenticated %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Current Default Values</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="default-values">
+                            <code>
+                                mode={{ defaults.mode }},
+                                band={{ defaults.band }},
+                                freq={{ defaults.freq }},
+                                rst_sent={{ defaults.rst_sent }},
+                                rst_rcvd={{ defaults.rst_rcvd }}
+                                {% if defaults.my_gridsquare %}, my_gridsquare={{ defaults.my_gridsquare }}{% endif %}
+                                {% if defaults.station_callsign %}, station_callsign={{ defaults.station_callsign }}{% endif %}
+                            </code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5>Quick Guide:</h5>
+                <ul>
+                    <li>Enter one QSO per line</li>
+                    {% if user.is_authenticated %}
+                        <li>Set defaults using lines starting with "default", e.g.: <code>default mode=FT8 freq=7.074</code></li>
+                    {% else %}
+                        <li><a href="{% url 'login' %}">Log in</a> to save your QSOs and set custom defaults</li>
+                    {% endif %}
+                    <li>Example QSO entries:
+                        <br><code>W1AW 14.074 FT8 599 FN31</code>
+                        <br><code>K1ABC running 100W great signal</code>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Free Text Input</h5>
+                </div>
+                <div class="card-body">
+                    <textarea id="inputArea" class="form-control" 
+                            placeholder="Enter your contacts here..."></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">ADIF Output</h5>
+                    {% if not user.is_authenticated %}
+                        <small class="text-muted">
+                            <a href="{% url 'login' %}">Log in</a> to save and export your QSOs
+                        </small>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <pre id="adifOutput" class="form-control"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let typingTimer;
+    const doneTypingInterval = 500; // ms
+
+    $('#inputArea').on('input', function() {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(parseText, doneTypingInterval);
+    });
+
+    function parseText() {
+        const text = $('#inputArea').val();
+        
+        $.ajax({
+            url: '{% url "parse_text" %}',
+            type: 'POST',
+            data: {
+                'text': text,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.adif) {
+                    $('#adifOutput').text(response.adif);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+</script>
+{% endblock %} 

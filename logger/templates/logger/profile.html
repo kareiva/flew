@@ -45,6 +45,31 @@
                 </div>
             </div>
 
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Saved Inputs</h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for input in saved_inputs %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ input.name }}</h6>
+                                <small class="text-muted">Last updated: {{ input.updated_at|date:"F j, Y, g:i a" }}</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-primary load-input" data-id="{{ input.id }}">Load</button>
+                                <a href="{% url 'delete_input' input.id %}" class="btn btn-sm btn-danger" 
+                                   onclick="return confirm('Are you sure you want to delete this saved input?')">Delete</a>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">No saved inputs yet. You can save your input text from the logger page.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <h4>Station Settings</h4>
@@ -80,4 +105,15 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.load-input').click(function() {
+        const inputId = $(this).data('id');
+        window.location.href = `{% url 'index' %}?load=${inputId}`;
+    });
+});
+</script>
 {% endblock %} 

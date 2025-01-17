@@ -1,11 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.db.models import Count
 from django.utils import timezone
-from .models import QSOLog, UserDefaults
+from .models import QSOLog, UserDefaults, SavedInput
 from .forms import ExtendedUserCreationForm, UserDefaultsForm
 from .utils import (
     callsign_pattern,
@@ -33,9 +33,27 @@ def signup(request):
 
 def index(request):
     defaults = None
+    saved_inputs = []
+    initial_input = None
+    
     if request.user.is_authenticated:
         defaults, _ = UserDefaults.objects.get_or_create(user=request.user)
-    return render(request, "logger/index.html", {"defaults": defaults})
+        saved_inputs = SavedInput.objects.filter(user=request.user)
+        
+        # Handle loading saved input
+        load_id = request.GET.get('load')
+        if load_id:
+            try:
+                initial_input = SavedInput.objects.get(id=load_id, user=request.user)
+            except SavedInput.DoesNotExist:
+                pass
+    
+    context = {
+        "defaults": defaults,
+        "saved_inputs": saved_inputs,
+        "initial_input": initial_input,
+    }
+    return render(request, "logger/index.html", context)
 
 
 @csrf_protect
@@ -86,8 +104,18 @@ def parse_text(request):
                 if request.user.is_authenticated:
                     adif_record = {**record, **operator_info}
                     adif_records.append(adif_record)
-                    # Create QSOLog with only the fields it supports
-                    QSOLog.objects.create(user=request.user, **record)
+                    
+                    # Check if this QSO already exists
+                    existing_qso = QSOLog.objects.filter(
+                        user=request.user,
+                        call=record['call'],
+                        qso_date=record['qso_date'],
+                        time_on=record['time_on']
+                    ).exists()
+                    
+                    # Only create QSOLog entry if it doesn't exist
+                    if not existing_qso:
+                        QSOLog.objects.create(user=request.user, **record)
                 else:
                     adif_records.append(record)
 
@@ -229,11 +257,50 @@ def profile(request):
     
     qso_count = QSOLog.objects.filter(user=request.user).count()
     last_login = request.user.last_login or request.user.date_joined
+    saved_inputs = SavedInput.objects.filter(user=request.user)
     
     context = {
         'qso_count': qso_count,
         'last_login': last_login,
         'user': request.user,
         'form': form,
+        'saved_inputs': saved_inputs,
     }
     return render(request, 'logger/profile.html', context)
+
+
+@login_required
+def save_input(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+        input_text = request.POST.get("input_text")
+        adif_text = request.POST.get("adif_text")
+        
+        if name and input_text:
+            SavedInput.objects.create(
+                user=request.user,
+                name=name,
+                input_text=input_text,
+                adif_text=adif_text or ""
+            )
+            messages.success(request, f'Input saved as "{name}"')
+            return JsonResponse({"status": "success"})
+    
+    return JsonResponse({"status": "error"})
+
+
+@login_required
+def delete_input(request, input_id):
+    saved_input = get_object_or_404(SavedInput, id=input_id, user=request.user)
+    saved_input.delete()
+    messages.success(request, f'Input "{saved_input.name}" deleted')
+    return redirect('profile')
+
+
+@login_required
+def load_input(request, input_id):
+    saved_input = get_object_or_404(SavedInput, id=input_id, user=request.user)
+    return JsonResponse({
+        "input_text": saved_input.input_text,
+        "adif_text": saved_input.adif_text
+    })

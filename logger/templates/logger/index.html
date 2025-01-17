@@ -55,7 +55,7 @@
                     {% endif %}
                     <li>Example QSO entries:
                         <br><code>W1AW 14.074 FT8 599 FN31</code>
-                        <br><code>K1ABC running 100W great signal</code>
+                        <br><code>K1ABC 7.125 SSB 59</code>
                     </li>
                 </ul>
             </div>
@@ -65,8 +65,14 @@
     <div class="row">
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Free Text Input</h5>
+                    {% if user.is_authenticated %}
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary" id="saveInput">Save Current</button>
+                        <button class="btn btn-sm btn-secondary" id="clearInput">Clear</button>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <textarea id="inputArea" class="form-control" 
@@ -92,20 +98,57 @@
         </div>
     </div>
 </div>
+
+<!-- Save Input Modal -->
+<div class="modal fade" id="saveInputModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Current Input</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="inputName" class="form-label">Name</label>
+                    <input type="text" class="form-control" id="inputName" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmSave">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     let typingTimer;
-    const doneTypingInterval = 500; // ms
+    const doneTypingInterval = 300;
+
+    // Initialize with saved input if available
+    {% if initial_input %}
+        $('#inputArea').val("{{ initial_input.input_text|escapejs }}");
+        $('#adifOutput').text("{{ initial_input.adif_text|escapejs }}");
+    {% endif %}
 
     $('#inputArea').on('input', function() {
         clearTimeout(typingTimer);
         typingTimer = setTimeout(parseText, doneTypingInterval);
     });
 
+    // Parse text immediately on page load if there's initial input
+    {% if initial_input %}
+        parseText();
+    {% endif %}
+
     function parseText() {
         const text = $('#inputArea').val();
+        if (text === '') {
+            $('#adifOutput').text('');
+            return;
+        }
         
         $.ajax({
             url: '{% url "parse_text" %}',
@@ -124,5 +167,51 @@
             }
         });
     }
+
+    {% if user.is_authenticated %}
+    const saveInputModal = new bootstrap.Modal(document.getElementById('saveInputModal'));
+
+    $('#saveInput').click(function() {
+        saveInputModal.show();
+    });
+
+    $('#clearInput').click(function() {
+        if (confirm('Are you sure you want to clear the input? This cannot be undone.')) {
+            $('#inputArea').val('');
+            $('#adifOutput').text('');
+        }
+    });
+
+    $('#confirmSave').click(function() {
+        const name = $('#inputName').val();
+        if (!name) {
+            alert('Please enter a name for this input');
+            return;
+        }
+
+        $.ajax({
+            url: '{% url "save_input" %}',
+            type: 'POST',
+            data: {
+                'name': name,
+                'input_text': $('#inputArea').val(),
+                'adif_text': $('#adifOutput').text(),
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    saveInputModal.hide();
+                    alert('Input saved successfully!');
+                    $('#inputName').val('');
+                } else {
+                    alert('Error saving input');
+                }
+            },
+            error: function() {
+                alert('Error saving input');
+            }
+        });
+    });
+    {% endif %}
 </script>
 {% endblock %} 

@@ -29,3 +29,15 @@ class UserDefaults(models.Model):
     rst_rcvd = models.CharField(max_length=3, default="59")
     my_gridsquare = models.CharField(max_length=6, blank=True)
     station_callsign = models.CharField(max_length=20, blank=True)
+
+
+class SavedInput(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    input_text = models.TextField()
+    adif_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]

@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.db.models import Count
 from django.utils import timezone
 from .models import QSOLog, UserDefaults, SavedInput
-from .forms import ExtendedUserCreationForm, UserDefaultsForm
+from .forms import ExtendedUserCreationForm, ProfileForm
 from .utils import (
     callsign_pattern,
     grid_pattern,
@@ -24,12 +24,13 @@ import datetime
 import csv
 import adif_io
 
+
 def signup(request):
     if request.method == "POST":
         form = ExtendedUserCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Account created successfully. Please log in.')
+            messages.success(request, "Account created successfully. Please log in.")
             return redirect("login")
     else:
         form = ExtendedUserCreationForm()
@@ -40,19 +41,19 @@ def index(request):
     defaults = None
     saved_inputs = []
     initial_input = None
-    
+
     if request.user.is_authenticated:
         defaults, _ = UserDefaults.objects.get_or_create(user=request.user)
         saved_inputs = SavedInput.objects.filter(user=request.user)
-        
+
         # Handle loading saved input
-        load_id = request.GET.get('load')
+        load_id = request.GET.get("load")
         if load_id:
             try:
                 initial_input = SavedInput.objects.get(id=load_id, user=request.user)
             except SavedInput.DoesNotExist:
                 pass
-    
+
     context = {
         "defaults": defaults,
         "saved_inputs": saved_inputs,
@@ -66,22 +67,33 @@ def parse_datetime(line):
     try:
         # First try to parse as full datetime
         for fmt in [
-            '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y/%m/%d %H:%M:%S', '%Y/%m/%d %H:%M',
-            '%d-%m-%Y %H:%M:%S', '%d-%m-%Y %H:%M', '%d/%m/%Y %H:%M:%S', '%d/%m/%Y %H:%M',
-            '%Y.%m.%d %H:%M:%S', '%Y.%m.%d %H:%M', '%d.%m.%Y %H:%M:%S', '%d.%m.%Y %H:%M'
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%Y/%m/%d %H:%M:%S",
+            "%Y/%m/%d %H:%M",
+            "%d-%m-%Y %H:%M:%S",
+            "%d-%m-%Y %H:%M",
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y %H:%M",
+            "%Y.%m.%d %H:%M:%S",
+            "%Y.%m.%d %H:%M",
+            "%d.%m.%Y %H:%M:%S",
+            "%d.%m.%Y %H:%M",
         ]:
             try:
                 # Replace separators consistently
-                test_str = line.replace('/', fmt[4]).replace('.', fmt[4]).replace(':', fmt[11])
+                test_str = (
+                    line.replace("/", fmt[4]).replace(".", fmt[4]).replace(":", fmt[11])
+                )
                 dt = datetime.datetime.strptime(test_str, fmt)
-                return dt.strftime('%Y%m%d'), dt.strftime('%H%M')
+                return dt.strftime("%Y%m%d"), dt.strftime("%H%M")
             except ValueError:
                 continue
 
         # Try to parse time only (HHMMSS, HHMM, or HH:MM:SS)
         time_match = re.search(time_pattern, line)
         if time_match:
-            time_str = time_match.group().replace(':', '')
+            time_str = time_match.group().replace(":", "")
             if len(time_str) == 6:  # HHMMSS format
                 return None, time_str[:4]  # Return just HHMM for ADIF
             elif len(time_str) == 4:  # HHMM format
@@ -89,22 +101,32 @@ def parse_datetime(line):
             else:
                 try:
                     # Try to parse as time
-                    t = datetime.datetime.strptime(time_match.group(), '%H:%M:%S').time()
-                    return None, t.strftime('%H%M')
+                    t = datetime.datetime.strptime(
+                        time_match.group(), "%H:%M:%S"
+                    ).time()
+                    return None, t.strftime("%H%M")
                 except ValueError:
                     try:
-                        t = datetime.datetime.strptime(time_match.group(), '%H:%M').time()
-                        return None, t.strftime('%H%M')
+                        t = datetime.datetime.strptime(
+                            time_match.group(), "%H:%M"
+                        ).time()
+                        return None, t.strftime("%H%M")
                     except ValueError:
                         pass
 
         # Try to parse date only
-        for fmt in ['%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d', 
-                   '%d-%m-%Y', '%d/%m/%Y', '%d.%m.%Y']:
+        for fmt in [
+            "%Y-%m-%d",
+            "%Y/%m/%d",
+            "%Y.%m.%d",
+            "%d-%m-%Y",
+            "%d/%m/%Y",
+            "%d.%m.%Y",
+        ]:
             try:
-                test_str = line.replace('/', fmt[4]).replace('.', fmt[4])
+                test_str = line.replace("/", fmt[4]).replace(".", fmt[4])
                 dt = datetime.datetime.strptime(test_str, fmt)
-                return dt.strftime('%Y%m%d'), None
+                return dt.strftime("%Y%m%d"), None
             except ValueError:
                 continue
 
@@ -118,14 +140,14 @@ def parse_date_line(line):
     try:
         line = line.strip()
         # Try YYYY-MM-DD format first
-        if re.match(r'^\d{4}-\d{2}-\d{2}$', line):
-            dt = datetime.datetime.strptime(line, '%Y-%m-%d')
-            return dt.strftime('%Y%m%d')
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", line):
+            dt = datetime.datetime.strptime(line, "%Y-%m-%d")
+            return dt.strftime("%Y%m%d")
         # Try other formats if needed
-        for fmt in ['%Y/%m/%d', '%Y.%m.%d']:
+        for fmt in ["%Y/%m/%d", "%Y.%m.%d"]:
             try:
                 dt = datetime.datetime.strptime(line, fmt)
-                return dt.strftime('%Y%m%d')
+                return dt.strftime("%Y%m%d")
             except ValueError:
                 continue
         return None
@@ -140,9 +162,9 @@ def parse_text(request):
         lines = text.split("\n")
         adif_records = []
         now = datetime.datetime.now()
-        current_date = now.strftime('%Y%m%d')
-        current_time = now.strftime('%H%M')
-        current_hour = now.strftime('%H')
+        current_date = now.strftime("%Y%m%d")
+        current_time = now.strftime("%H%M")
+        current_hour = now.strftime("%H")
 
         # Get default values
         default_values = {
@@ -154,11 +176,13 @@ def parse_text(request):
         # If user is logged in, use their defaults
         if request.user.is_authenticated:
             defaults, _ = UserDefaults.objects.get_or_create(user=request.user)
-            default_values.update({
-                "mode": defaults.mode,
-                "band": defaults.band,
-                "freq": defaults.freq,
-            })
+            default_values.update(
+                {
+                    "mode": defaults.mode,
+                    "band": defaults.band,
+                    "freq": defaults.freq,
+                }
+            )
             # Store operator info separately as they don't go into QSOLog
             operator_info = {}
             if defaults.my_gridsquare:
@@ -198,7 +222,7 @@ def parse_text(request):
                 if parsed_date:
                     current_date = parsed_date
                     continue
-                
+
                 # Then try parsing as datetime
                 parsed_date, parsed_time = parse_datetime(line)
                 if parsed_date:
@@ -264,16 +288,17 @@ def parse_rst(text, mode):
     default_r = "5"
     default_s = "9"
     default_t = "9"
-    
+
     # Find all numbers after removing any MHz/frequency/time patterns
     numbers = []
-    for match in re.finditer(r'\b\d{1,3}\b', text):
+    for match in re.finditer(r"\b\d{1,3}\b", text):
         num = match.group()
         # Skip if it's part of a frequency or time
-        if not re.search(r'MHz|MHZ|Mhz', text[match.start():match.end()+3]) and \
-           not re.match(r'\d{4}|\d{6}|\d{1,2}:\d{2}(:\d{2})?', num):
+        if not re.search(
+            r"MHz|MHZ|Mhz", text[match.start() : match.end() + 3]
+        ) and not re.match(r"\d{4}|\d{6}|\d{1,2}:\d{2}(:\d{2})?", num):
             numbers.append(num)
-    
+
     def process_rst(num):
         if len(num) == 1:  # Single digit sets S
             rst = default_r + num
@@ -313,38 +338,40 @@ def parse_line(line, default_values, qso_date=None, qso_time=None):
     # Check for time in this line
     time_match = re.search(time_pattern, line)
     if time_match:
-        qso_time = time_match.group().replace(':', '')
+        qso_time = time_match.group().replace(":", "")
 
     # First check for minute before callsign
     minute_match = None
-    
+
     # Remove band pattern from line before searching for callsign if band is at start
     line_for_call = line
     if band and line.strip().startswith(band.group()):
-        line_for_call = line[band.end():].strip()
-    
+        line_for_call = line[band.end() :].strip()
+
     # Now search for callsign in the modified line
     callsign = re.search(callsign_pattern, line_for_call.upper())
-    
+
     if callsign:
         # Get the text before callsign for minute check
         call_start = line_for_call.upper().find(callsign.group())
         if call_start > 0:
             before_call = line_for_call[:call_start].strip()
             # Check if it's a minute (1-59)
-            if re.match(r'^[0-5]?[0-9]$', before_call):
-                minute_match = re.match(r'^([0-5]?[0-9])$', before_call)
+            if re.match(r"^[0-5]?[0-9]$", before_call):
+                minute_match = re.match(r"^([0-5]?[0-9])$", before_call)
                 if minute_match:
                     qso_time = f"{qso_time[:2]}{minute_match.group(1).zfill(2)}"
 
         record = default_values.copy()
         now = datetime.datetime.now()
 
-        record.update({
-            "call": callsign.group(),
-            "qso_date": qso_date or now.strftime("%Y%m%d"),
-            "time_on": qso_time or now.strftime("%H%M"),
-        })
+        record.update(
+            {
+                "call": callsign.group(),
+                "qso_date": qso_date or now.strftime("%Y%m%d"),
+                "time_on": qso_time or now.strftime("%H%M"),
+            }
+        )
 
         # Handle frequency and band
         if frequency:
@@ -370,22 +397,24 @@ def parse_line(line, default_values, qso_date=None, qso_time=None):
             record["mode"] = mode.group()
 
         # Get text after callsign for RST, STX, and SRX parsing
-        after_call = line_for_call[line_for_call.upper().find(callsign.group()) + len(callsign.group()):]
-        
+        after_call = line_for_call[
+            line_for_call.upper().find(callsign.group()) + len(callsign.group()) :
+        ]
+
         # Look for STX (numbers prefixed with comma)
-        stx_match = re.search(r',(\d+)', after_call)
+        stx_match = re.search(r",(\d+)", after_call)
         if stx_match:
             record["stx"] = stx_match.group(1)
             # Remove the matched STX from after_call to not interfere with RST parsing
-            after_call = after_call.replace(stx_match.group(0), '')
-            
+            after_call = after_call.replace(stx_match.group(0), "")
+
         # Look for SRX (numbers prefixed with dot)
-        srx_match = re.search(r'\.(\d+)', after_call)
+        srx_match = re.search(r"\.(\d+)", after_call)
         if srx_match:
             record["srx"] = srx_match.group(1)
             # Remove the matched SRX from after_call to not interfere with RST parsing
-            after_call = after_call.replace(srx_match.group(0), '')
-            
+            after_call = after_call.replace(srx_match.group(0), "")
+
         # Parse RST from remaining text
         rst_sent, rst_rcvd = parse_rst(after_call, record.get("mode", "SSB"))
         record["rst_sent"] = rst_sent
@@ -452,12 +481,12 @@ def convert_to_adif(records):
 @login_required
 def export_adif(request):
     qsos = QSOLog.objects.filter(user=request.user)
-    
+
     # If no QSOs to export, return early
     if not qsos.exists():
-        messages.warning(request, 'No QSOs to export.')
-        return redirect('profile')
-    
+        messages.warning(request, "No QSOs to export.")
+        return redirect("profile")
+
     defaults = UserDefaults.objects.get(user=request.user)
     now = datetime.datetime.now()
 
@@ -469,10 +498,10 @@ def export_adif(request):
         f"<PROGRAMID:4>FLEW\n"
         f"<PROGRAMVERSION:5>1.0.0\n"
     )
-    
+
     if defaults.station_callsign:
         header += f"<STATION_CALLSIGN:{len(defaults.station_callsign)}>{defaults.station_callsign}\n"
-    
+
     header += "<EOH>\n\n"
 
     # Generate QSO records
@@ -480,39 +509,41 @@ def export_adif(request):
     for qso in qsos:
         # Add regular QSO fields
         for field in qso._meta.fields:
-            if field.name not in ["id", "user", "created_at"] and getattr(qso, field.name):
+            if field.name not in ["id", "user", "created_at"] and getattr(
+                qso, field.name
+            ):
                 value = getattr(qso, field.name)
                 qso_records += f"<{field.name}:{len(str(value))}>{value}"
-        
+
         # Add station callsign if set
         if defaults.station_callsign:
             value = defaults.station_callsign
             qso_records += f"<STATION_CALLSIGN:{len(value)}>{value}"
-            
+
         qso_records += "<eor>\n"
 
     adif_output = header + qso_records
-    
+
     # Prepare response
     response = HttpResponse(adif_output, content_type="text/plain")
     response["Content-Disposition"] = 'attachment; filename="logbook.adi"'
-    
+
     # Delete QSOs after successful preparation of export
     qso_count = qsos.count()
     qsos.delete()
-    messages.success(request, f'Successfully exported and cleared {qso_count} QSOs.')
-    
+    messages.success(request, f"Successfully exported and cleared {qso_count} QSOs.")
+
     return response
 
 
 @login_required
 def export_csv(request):
     qsos = QSOLog.objects.filter(user=request.user)
-    
+
     # If no QSOs to export, return early
     if not qsos.exists():
-        messages.warning(request, 'No QSOs to export.')
-        return redirect('profile')
+        messages.warning(request, "No QSOs to export.")
+        return redirect("profile")
 
     # Prepare CSV data
     response = HttpResponse(content_type="text/csv")
@@ -525,40 +556,40 @@ def export_csv(request):
     for qso in qsos:
         row = [getattr(qso, field) for field in fields]
         writer.writerow(row)
-    
+
     # Delete QSOs after successful preparation of export
     qso_count = qsos.count()
     qsos.delete()
-    messages.success(request, f'Successfully exported and cleared {qso_count} QSOs.')
-    
+    messages.success(request, f"Successfully exported and cleared {qso_count} QSOs.")
+
     return response
 
 
 @login_required
 def profile(request):
     user_defaults = UserDefaults.objects.get(user=request.user)
-    
+
     if request.method == "POST":
-        form = UserDefaultsForm(request.POST, instance=user_defaults)
+        form = ProfileForm(request.POST, instance=user_defaults)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Profile updated successfully.')
-            return redirect('profile')
+            messages.success(request, "Profile updated successfully.")
+            return redirect("profile")
     else:
-        form = UserDefaultsForm(instance=user_defaults)
-    
+        form = ProfileForm(instance=user_defaults)
+
     qso_count = QSOLog.objects.filter(user=request.user).count()
     last_login = request.user.last_login or request.user.date_joined
     saved_inputs = SavedInput.objects.filter(user=request.user)
-    
+
     context = {
-        'qso_count': qso_count,
-        'last_login': last_login,
-        'user': request.user,
-        'form': form,
-        'saved_inputs': saved_inputs,
+        "qso_count": qso_count,
+        "last_login": last_login,
+        "user": request.user,
+        "form": form,
+        "saved_inputs": saved_inputs,
     }
-    return render(request, 'logger/profile.html', context)
+    return render(request, "logger/profile.html", context)
 
 
 @login_required
@@ -567,22 +598,24 @@ def save_input(request):
         name = request.POST.get("name")
         input_text = request.POST.get("input_text", "").strip()
         adif_text = request.POST.get("adif_text")
-        
+
         if name and input_text:
             # Check if first line is a date/datetime
-            first_line = input_text.split('\n')[0].strip()
-            if not re.search(datetime_pattern, first_line) or re.search(callsign_pattern, first_line):
+            first_line = input_text.split("\n")[0].strip()
+            if not re.search(datetime_pattern, first_line) or re.search(
+                callsign_pattern, first_line
+            ):
                 # Prepend current date and time
                 now = datetime.datetime.now()
-                datetime_line = now.strftime('%Y-%m-%d %H:%M:%S')
+                datetime_line = now.strftime("%Y-%m-%d %H:%M:%S")
                 input_text = f"{datetime_line}\n{input_text}"
-                
+
                 # Regenerate ADIF text with the new datetime
-                lines = input_text.split('\n')
+                lines = input_text.split("\n")
                 adif_records = []
-                current_date = now.strftime('%Y%m%d')
-                current_time = now.strftime('%H%M')
-                
+                current_date = now.strftime("%Y%m%d")
+                current_time = now.strftime("%H%M")
+
                 # Get user defaults
                 defaults, _ = UserDefaults.objects.get_or_create(user=request.user)
                 default_values = {
@@ -594,50 +627,52 @@ def save_input(request):
                     "my_gridsquare": defaults.my_gridsquare,
                     "station_callsign": defaults.station_callsign,
                 }
-                
+
                 for line in lines:
                     line = line.strip()
                     if not line:
                         continue
-                        
-                    if re.search(datetime_pattern, line) and not re.search(callsign_pattern, line):
+
+                    if re.search(datetime_pattern, line) and not re.search(
+                        callsign_pattern, line
+                    ):
                         date, time = parse_datetime(line)
                         if date:
                             current_date = date
                         if time:
                             current_time = time
                         continue
-                        
+
                     if line.lower().startswith("default"):
                         continue
-                        
+
                     # Check for time in the QSO line itself
                     time_match = re.search(time_pattern, line)
                     if time_match:
                         _, line_time = parse_datetime(line)
                         if line_time:
                             current_time = line_time
-                            
-                    record = parse_line(line, default_values, current_date, current_time)
+
+                    record = parse_line(
+                        line, default_values, current_date, current_time
+                    )
                     if record:
                         adif_record = {**record, **operator_info}
                         adif_records.append(adif_record)
-                
+
                 adif_text = convert_to_adif(adif_records)
-            
+
             SavedInput.objects.create(
                 user=request.user,
                 name=name,
                 input_text=input_text,
-                adif_text=adif_text or ""
+                adif_text=adif_text or "",
             )
             messages.success(request, f'Input saved as "{name}"')
-            return JsonResponse({
-                "status": "success",
-                "input_text": input_text,
-                "adif_text": adif_text
-            })
-    
+            return JsonResponse(
+                {"status": "success", "input_text": input_text, "adif_text": adif_text}
+            )
+
     return JsonResponse({"status": "error"})
 
 
@@ -646,72 +681,51 @@ def delete_input(request, input_id):
     saved_input = get_object_or_404(SavedInput, id=input_id, user=request.user)
     saved_input.delete()
     messages.success(request, f'Input "{saved_input.name}" deleted')
-    return redirect('profile')
+    return redirect("profile")
 
 
 @login_required
 def load_input(request, input_id):
     saved_input = get_object_or_404(SavedInput, id=input_id, user=request.user)
-    return JsonResponse({
-        "input_text": saved_input.input_text,
-        "adif_text": saved_input.adif_text
-    })
+    return JsonResponse(
+        {"input_text": saved_input.input_text, "adif_text": saved_input.adif_text}
+    )
 
 
 @login_required
 def save_qsos(request):
     if request.method == "POST":
+        user_defaults = UserDefaults.objects.get(user=request.user)
+        if not user_defaults.station_callsign:
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "Please set your station callsign in your profile settings before saving QSOs.",
+                }
+            )
+
         adif_text = request.POST.get("adif_text", "")
         if not adif_text:
-            return JsonResponse({"status": "error", "message": "No ADIF data provided"})
-            
+            return JsonResponse({"status": "error", "message": "No QSOs to save"})
+
         try:
-            # Parse ADIF using adif_io
             qsos, header = adif_io.read_from_string(adif_text)
-            
-            # Save records as QSOs
-            saved_count = 0
-            errors = []
-            
-            # Get list of valid model fields
-            valid_fields = [f.name for f in QSOLog._meta.fields]
-            
             for qso in qsos:
-                try:
-                    # Convert all keys to lowercase for consistency
-                    qso = {k.lower(): v for k, v in qso.items()}
-                    
-                    if "call" in qso:  # Only save if we have a callsign
-                        # Create QSO record with only the fields that exist in the model
-                        qso_fields = {k: v for k, v in qso.items() 
-                                    if k in valid_fields and k not in ['id', 'user']}
-                        QSOLog.objects.create(user=request.user, **qso_fields)
-                        saved_count += 1
-                except Exception as e:
-                    errors.append(f"Error saving QSO {qso.get('call', 'unknown')}: {str(e)}")
-                    print(f"Error saving QSO: {str(e)}")  # Server-side logging
-                    
-            if saved_count > 0:
-                return JsonResponse({
+                # Convert all keys to lowercase for consistency
+                qso = {k.lower(): v for k, v in qso.items()}
+                QSOLog.objects.create(user=request.user, **qso)
+
+            return JsonResponse(
+                {
                     "status": "success",
-                    "message": f"Saved {saved_count} QSOs to your log"
-                })
-            else:
-                error_msg = "No valid QSOs found to save"
-                if errors:
-                    error_msg += f". Errors: {'; '.join(errors)}"
-                return JsonResponse({
-                    "status": "error",
-                    "message": error_msg
-                })
-                
+                    "message": f"Successfully saved {len(qsos)} QSOs to your log.",
+                }
+            )
         except Exception as e:
-            print(f"Error parsing ADIF: {str(e)}")  # Server-side logging
-            return JsonResponse({
-                "status": "error",
-                "message": f"Error parsing ADIF data: {str(e)}"
-            })
-        
+            return JsonResponse(
+                {"status": "error", "message": f"Error saving QSOs: {str(e)}"}
+            )
+
     return JsonResponse({"status": "error", "message": "Invalid request method"})
 
 

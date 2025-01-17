@@ -19,24 +19,44 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            {% trans "Language" %}
+                            {% get_current_language as LANGUAGE_CODE %}
+                            {% if LANGUAGE_CODE == 'en' %}
+                                🇬🇧
+                            {% elif LANGUAGE_CODE == 'lt' %}
+                                🇱🇹
+                            {% elif LANGUAGE_CODE == 'ru' %}
+                                🇷🇺
+                            {% else %}
+                                🌐
+                            {% endif %}
                         </a>
                         <ul class="dropdown-menu">
                             <form action="{% url 'set_language' %}" method="post" id="language-form">
                                 {% csrf_token %}
                                 <input name="next" type="hidden" value="{{ request.path }}">
-                                {% get_current_language as LANGUAGE_CODE %}
                                 {% get_available_languages as LANGUAGES %}
                                 {% for lang_code, lang_name in LANGUAGES %}
                                     <li>
                                         <button type="submit" name="language" value="{{ lang_code }}" 
                                                 class="dropdown-item {% if lang_code == LANGUAGE_CODE %}active{% endif %}">
+                                            {% if lang_code == 'en' %}
+                                                🇬🇧
+                                            {% elif lang_code == 'lt' %}
+                                                🇱🇹
+                                            {% elif lang_code == 'ru' %}
+                                                🇷🇺
+                                            {% else %}
+                                                🌐
+                                            {% endif %}
                                             {{ lang_name }}
                                         </button>
                                     </li>
                                 {% endfor %}
                             </form>
                         </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'help' %}">Help</a>
                     </li>
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
@@ -50,18 +70,6 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'profile' %}">{{ user.username }}</a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="exportDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Export
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                                <li><a class="dropdown-item" href="{% url 'export_adif' %}">Export ADIF</a></li>
-                                <li><a class="dropdown-item" href="{% url 'export_csv' %}">Export CSV</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'help' %}">Help</a>
                         </li>
                         <li class="nav-item">
                             <form method="post" action="{% url 'logout' %}" class="d-inline">

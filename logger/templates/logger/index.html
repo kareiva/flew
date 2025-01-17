@@ -11,14 +11,14 @@
                 </div>
                 <div class="card-body">
                     <textarea id="qso-input" class="form-control" rows="10" placeholder="Enter QSO data here...">{% if initial_input %}{{ initial_input.input_text }}{% endif %}</textarea>
-                    {% if user.is_authenticated %}
                     <div class="mt-3">
                         <div class="input-group">
-                            <input type="text" id="save-name" class="form-control" placeholder="Enter a name for this input">
-                            <button class="btn btn-primary" id="save-input">Save</button>
+                            <input type="text" id="save-name" class="form-control" placeholder="Enter a name for this input" {% if not user.is_authenticated %}disabled{% endif %}>
+                            <button class="btn btn-primary" id="save-input" {% if not user.is_authenticated %}onclick="window.location.href='{% url 'signup' %}'"{% endif %}>
+                                {% if user.is_authenticated %}Save{% else %}Sign Up to Save{% endif %}
+                            </button>
                         </div>
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -30,11 +30,11 @@
                 <div class="card-body">
                     <div class="form-group">
                         <textarea class="form-control" id="adif_output" rows="10" readonly>{% if initial_input %}{{ initial_input.adif_text }}{% endif %}</textarea>
-                        {% if user.is_authenticated %}
                         <div class="mt-2">
-                            <button type="button" class="btn btn-primary" onclick="saveQSOs()">Save QSOs to Log</button>
+                            <button type="button" class="btn btn-primary" {% if user.is_authenticated %}onclick="saveQSOs()"{% else %}onclick="window.location.href='{% url 'signup' %}'"{% endif %}>
+                                {% if user.is_authenticated %}Save QSOs to Log{% else %}Sign Up to Save QSOs{% endif %}
+                            </button>
                         </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -52,14 +52,7 @@
 58 ly2xyz                    # Minute before callsign (sets time to HH:58)
 ly3def ,001 .002            # Sent exchange 001, received exchange 002
 ly4ghi 7                    # Single digit 7 sets RST to 57 (phone) or 579 (CW)</pre>
-                <p>Special commands:</p>
-                <ul>
-                    <li><code>mycall CALLSIGN</code> - Set your station callsign</li>
-                    <li><code>mygrid GRID</code> - Set your grid square</li>
-                    <li><code>default mode=CW</code> - Set default mode</li>
-                    <li><code>default band=20m</code> - Set default band</li>
-                    <li><code>default freq=14.074</code> - Set default frequency</li>
-                </ul>
+                <p>For more examples and detailed instructions, check out the <a href="{% url 'help' %}">Help page</a>.</p>
             </div>
         </div>
     </div>

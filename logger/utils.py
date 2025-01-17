@@ -18,4 +18,4 @@ date_pattern = r"\b(?:\d{4}[-/.]\d{2}[-/.]\d{2}|\d{2}[-/.]\d{2}[-/.]\d{4})\b"
 time_pattern = r"\b(?:\d{1,2}:\d{2}(?::\d{2})?|\d{6}|\d{4})\b"
 
 # Combined datetime pattern - date alone or date with time
-datetime_pattern = fr"(?:{date_pattern}(?:\s+{time_pattern})?)" 
+datetime_pattern = rf"(?:{date_pattern}(?:\s+{time_pattern})?)"

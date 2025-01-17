@@ -58,7 +58,7 @@ ROOT_URLCONF = "flew.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'logger' / 'templates'],
+        "DIRS": [BASE_DIR / "logger" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -110,9 +110,9 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en"
 
 LANGUAGES = [
-    ('en', _('English')),
-    ('lt', _('Lithuanian')),
-    ('pl', _('Polish')),
+    ("en", _("English")),
+    ("lt", _("Lithuanian")),
+    ("pl", _("Polish")),
 ]
 
 TIME_ZONE = "UTC"
@@ -134,12 +134,12 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LOGIN_REDIRECT_URL = '/profile/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = "/profile/"
+LOGOUT_REDIRECT_URL = "/"
 
-LOGIN_URL = 'login'
+LOGIN_URL = "login"
 
 # Locale paths
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',
+    BASE_DIR / "locale",
 ]

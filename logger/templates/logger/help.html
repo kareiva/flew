@@ -1,0 +1,142 @@
+{% extends "logger/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>FLEW Help - Data Entry Guide</h2>
+        </div>
+        <div class="card-body">
+            <h3 class="mb-4">Data Entry Examples</h3>
+            
+            <h4>1. Setting Date and Time</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+2024-01-20                    # Sets date for subsequent QSOs
+2024-01-20 14:30             # Sets both date and time
+14:30                        # Sets only time
+45                           # Sets minute (uses current hour)</pre>
+            </div>
+
+            <h4>2. Basic QSO Formats</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+LY2AA                        # Basic callsign entry (uses defaults)
+LY2AA 599                    # Callsign with RST
+14.074 LY2AA                 # Frequency and callsign
+20m LY2AA                    # Band and callsign
+14:30 LY2AA                  # Time and callsign
+45 LY2AA                     # Minute and callsign</pre>
+            </div>
+
+            <h4>3. RST Variations</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+LY2AA 5                      # Single digit (becomes 55/559 depending on mode)
+LY2AA 58                     # Two digits (becomes 58/589 depending on mode)
+LY2AA 589                    # Full RST
+LY2AA 599 579               # Sent and received RST</pre>
+            </div>
+
+            <h4>4. Contest Style</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+LY2AA 599 ,001              # QSO with sent serial number
+LY2AA 599 ,001 .002         # QSO with sent and received serial numbers
+LY2AA ,123                  # Just serial number sent
+LY2AA .456                  # Just serial number received</pre>
+            </div>
+
+            <h4>5. Combined Formats</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+14.074 LY2AA 599 KO24       # Frequency, call, RST, grid
+30m LY2AA 599 ,001          # Band, call, RST, serial
+14:30 LY2AA 599 KO24        # Time, call, RST, grid
+45 LY2AA 599 ,001 .002      # Minute, call, RST, serials</pre>
+            </div>
+
+            <h4>6. Setting Station Information</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+mycall LY1ABC               # Set your station callsign
+mygrid KO24                 # Set your grid square
+default mode=CW             # Set default mode
+default band=20m            # Set default band
+default freq=14.074         # Set default frequency</pre>
+            </div>
+
+            <h4>7. Multiple QSOs Example</h4>
+            <div class="mb-4">
+                <pre class="bg-light p-3">
+2024-01-20 14:30
+14.074 LY2AA 599 KO24
+LY3BB 599
+30m LY4CC 579
+45 LY5DD 599 ,001
+LY6EE .002</pre>
+            </div>
+
+            <h3 class="mt-4">Important Notes</h3>
+            <ul class="mb-4">
+                <li>All entries are case-insensitive</li>
+                <li>Fields can be in any order after the callsign</li>
+                <li>Default values are used for any missing fields</li>
+                <li>Time can be in 24-hour format (HH:MM or HHMM)</li>
+                <li>Date formats: YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD</li>
+                <li>Frequencies can be entered with or without MHz</li>
+                <li>Grid squares must be 4 or 6 characters</li>
+                <li>Serial numbers must be prefixed with comma (sent) or dot (received)</li>
+            </ul>
+
+            <h3>Field Descriptions</h3>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Format</th>
+                        <th>Examples</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Date</td>
+                        <td>YYYY-MM-DD</td>
+                        <td>2024-01-20, 2024/01/20</td>
+                    </tr>
+                    <tr>
+                        <td>Time</td>
+                        <td>HH:MM or MM</td>
+                        <td>14:30, 14:30:00, 45</td>
+                    </tr>
+                    <tr>
+                        <td>Frequency</td>
+                        <td>Number[.Number] [MHz]</td>
+                        <td>14.074, 14.074MHz</td>
+                    </tr>
+                    <tr>
+                        <td>Band</td>
+                        <td>Number + m</td>
+                        <td>20m, 40m, 30m</td>
+                    </tr>
+                    <tr>
+                        <td>RST</td>
+                        <td>1-3 digits</td>
+                        <td>5, 59, 599</td>
+                    </tr>
+                    <tr>
+                        <td>Grid</td>
+                        <td>4-6 characters</td>
+                        <td>KO24, KO24ab</td>
+                    </tr>
+                    <tr>
+                        <td>Serial Numbers</td>
+                        <td>,NNN or .NNN</td>
+                        <td>,001, .002</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -11,28 +11,16 @@
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
+                        {% for field in form %}
                         <div class="mb-3">
-                            <label for="id_username" class="form-label">Username</label>
-                            <input type="text" name="username" class="form-control" id="id_username" required>
-                            <div class="form-text">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</div>
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field.errors }}
+                            {{ field|add_class:"form-control" }}
+                            {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
                         </div>
-                        <div class="mb-3">
-                            <label for="id_password1" class="form-label">Password</label>
-                            <input type="password" name="password1" class="form-control" id="id_password1" required>
-                            <div class="form-text">
-                                <ul>
-                                    <li>Your password can't be too similar to your other personal information.</li>
-                                    <li>Your password must contain at least 8 characters.</li>
-                                    <li>Your password can't be a commonly used password.</li>
-                                    <li>Your password can't be entirely numeric.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="id_password2" class="form-label">Password Confirmation</label>
-                            <input type="password" name="password2" class="form-control" id="id_password2" required>
-                            <div class="form-text">Enter the same password as before, for verification.</div>
-                        </div>
+                        {% endfor %}
                         <button type="submit" class="btn btn-primary">Sign Up</button>
                     </form>
                     <p class="mt-3">

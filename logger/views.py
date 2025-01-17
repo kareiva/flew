@@ -1,23 +1,33 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
+from django.db.models import Count
+from django.utils import timezone
 from .models import QSOLog, UserDefaults
+from .forms import ExtendedUserCreationForm, UserDefaultsForm
+from .utils import (
+    callsign_pattern,
+    grid_pattern,
+    frequency_pattern,
+    mode_pattern,
+    rst_pattern,
+)
 import re
 import datetime
 import csv
 import adif_io
 
-
 def signup(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = ExtendedUserCreationForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, 'Account created successfully. Please log in.')
             return redirect("login")
     else:
-        form = UserCreationForm()
+        form = ExtendedUserCreationForm()
     return render(request, "registration/signup.html", {"form": form})
 
 
@@ -47,17 +57,18 @@ def parse_text(request):
         # If user is logged in, use their defaults
         if request.user.is_authenticated:
             defaults, _ = UserDefaults.objects.get_or_create(user=request.user)
-            default_values.update(
-                {
-                    "mode": defaults.mode,
-                    "band": defaults.band,
-                    "freq": defaults.freq,
-                    "rst_sent": defaults.rst_sent,
-                    "rst_rcvd": defaults.rst_rcvd,
-                    "my_gridsquare": defaults.my_gridsquare,
-                    "station_callsign": defaults.station_callsign,
-                }
-            )
+            default_values.update({
+                "mode": defaults.mode,
+                "band": defaults.band,
+                "freq": defaults.freq,
+                "rst_sent": defaults.rst_sent,
+                "rst_rcvd": defaults.rst_rcvd,
+            })
+            # Store operator info separately as they don't go into QSOLog
+            operator_info = {
+                "my_gridsquare": defaults.my_gridsquare,
+                "station_callsign": defaults.station_callsign,
+            }
 
         for line in lines:
             line = line.strip()
@@ -71,9 +82,14 @@ def parse_text(request):
 
             record = parse_line(line, default_values)
             if record:
-                adif_records.append(record)
+                # Add operator info to ADIF output but not to QSOLog
                 if request.user.is_authenticated:
+                    adif_record = {**record, **operator_info}
+                    adif_records.append(adif_record)
+                    # Create QSOLog with only the fields it supports
                     QSOLog.objects.create(user=request.user, **record)
+                else:
+                    adif_records.append(record)
 
         adif_output = convert_to_adif(adif_records)
         return JsonResponse({"adif": adif_output})
@@ -92,12 +108,6 @@ def update_default_values(line, defaults):
 
 
 def parse_line(line, default_values):
-    callsign_pattern = r"\b[A-Z0-9]{1,3}[0-9][A-Z0-9]*[A-Z]\b"
-    frequency_pattern = r"\b\d+\.?\d*\s*(?:MHZ|MHz|Mhz)?\b"
-    mode_pattern = r"\b(CW|SSB|FM|FT8|FT4|RTTY|PSK31)\b"
-    rst_pattern = r"\b[1-5][1-9]\b"
-    grid_pattern = r"\b[A-R]{2}[0-9]{2}(?:[A-X]{2})?\b"
-
     callsign = re.search(callsign_pattern, line.upper())
     frequency = re.search(frequency_pattern, line)
     mode = re.search(mode_pattern, line.upper())
@@ -202,3 +212,28 @@ def export_csv(request):
         writer.writerow(row)
 
     return response
+
+
+@login_required
+def profile(request):
+    user_defaults = UserDefaults.objects.get(user=request.user)
+    
+    if request.method == "POST":
+        form = UserDefaultsForm(request.POST, instance=user_defaults)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully.')
+            return redirect('profile')
+    else:
+        form = UserDefaultsForm(instance=user_defaults)
+    
+    qso_count = QSOLog.objects.filter(user=request.user).count()
+    last_login = request.user.last_login or request.user.date_joined
+    
+    context = {
+        'qso_count': qso_count,
+        'last_login': last_login,
+        'user': request.user,
+        'form': form,
+    }
+    return render(request, 'logger/profile.html', context)

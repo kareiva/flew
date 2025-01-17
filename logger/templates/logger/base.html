@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+{% load i18n %}
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FLEW - Free Log Entry for the Web</title>
+    <title>{% trans "FLEW - Free Log Entry for the Web" %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     {% block extra_css %}{% endblock %}
 </head>
@@ -16,10 +17,31 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            {% trans "Language" %}
+                        </a>
+                        <ul class="dropdown-menu">
+                            <form action="{% url 'set_language' %}" method="post" id="language-form">
+                                {% csrf_token %}
+                                <input name="next" type="hidden" value="{{ request.path }}">
+                                {% get_current_language as LANGUAGE_CODE %}
+                                {% get_available_languages as LANGUAGES %}
+                                {% for lang_code, lang_name in LANGUAGES %}
+                                    <li>
+                                        <button type="submit" name="language" value="{{ lang_code }}" 
+                                                class="dropdown-item {% if lang_code == LANGUAGE_CODE %}active{% endif %}">
+                                            {{ lang_name }}
+                                        </button>
+                                    </li>
+                                {% endfor %}
+                            </form>
+                        </ul>
+                    </li>
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                Export
+                                {% trans "Export" %}
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'export_adif' %}">ADIF</a></li>
@@ -32,15 +54,15 @@
                         <li class="nav-item">
                             <form method="post" action="{% url 'logout' %}" class="d-inline">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-link nav-link">Logout</button>
+                                <button type="submit" class="btn btn-link nav-link">{% trans "Logout" %}</button>
                             </form>
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                            <a class="nav-link" href="{% url 'login' %}">{% trans "Login" %}</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'signup' %}">Sign Up</a>
+                            <a class="nav-link" href="{% url 'signup' %}">{% trans "Sign Up" %}</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -62,6 +84,14 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-submit language form when selection changes
+        document.querySelectorAll('#language-form button').forEach(button => {
+            button.addEventListener('click', function() {
+                this.form.submit();
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html> 

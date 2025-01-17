@@ -12,6 +12,8 @@ class QSOLog(models.Model):
     band = models.CharField(max_length=6)
     rst_sent = models.CharField(max_length=3)
     rst_rcvd = models.CharField(max_length=3)
+    stx = models.CharField(max_length=10, blank=True)
+    srx = models.CharField(max_length=10, blank=True)
     gridsquare = models.CharField(max_length=6, blank=True)
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -22,13 +24,14 @@ class QSOLog(models.Model):
 
 class UserDefaults(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    station_callsign = models.CharField(max_length=10, blank=True)
+    my_gridsquare = models.CharField(max_length=8, blank=True)
     mode = models.CharField(max_length=10, default="SSB")
-    band = models.CharField(max_length=6, default="20m")
+    band = models.CharField(max_length=10, default="20m")
     freq = models.CharField(max_length=10, default="14.200")
-    rst_sent = models.CharField(max_length=3, default="59")
-    rst_rcvd = models.CharField(max_length=3, default="59")
-    my_gridsquare = models.CharField(max_length=6, blank=True)
-    station_callsign = models.CharField(max_length=20, blank=True)
+
+    def __str__(self):
+        return f"Defaults for {self.user.username}"
 
 
 class SavedInput(models.Model):

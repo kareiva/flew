@@ -11,4 +11,6 @@ urlpatterns = [
     path("save-input/", views.save_input, name="save_input"),
     path("delete-input/<int:input_id>/", views.delete_input, name="delete_input"),
     path("load-input/<int:input_id>/", views.load_input, name="load_input"),
+    path("save-qsos/", views.save_qsos, name="save_qsos"),
+    path("help/", views.help, name="help"),
 ]

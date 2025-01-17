@@ -49,11 +49,9 @@ class UserDefaultsForm(forms.ModelForm):
     class Meta:
         from .models import UserDefaults
         model = UserDefaults
-        fields = ['station_callsign', 'my_gridsquare', 'mode', 'band', 'freq', 'rst_sent', 'rst_rcvd']
+        fields = ['station_callsign', 'my_gridsquare', 'mode', 'band', 'freq']
         labels = {
             'my_gridsquare': 'Grid Square',
             'station_callsign': 'Station Callsign',
-            'rst_sent': 'Default RST Sent',
-            'rst_rcvd': 'Default RST Received',
             'freq': 'Default Frequency',
         } 

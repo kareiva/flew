@@ -28,6 +28,9 @@ RUN apt-get update && \
 # Copy the Django project into the container
 COPY . /app/
 
+# Collect static files on the container
+RUN mkdir /app/static && python manage.py collectstatic --noinput
+
 # Expose the port the app runs on
 EXPOSE 8000
 

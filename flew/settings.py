@@ -36,6 +36,8 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
+CSRF_TRUSTED_ORIGINS = ['https://logs.cqcq.lt']
+
 # Application definition
 
 INSTALLED_APPS = [

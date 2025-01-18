@@ -45,3 +45,31 @@ class SavedInput(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.user.username}"
+
+
+class LoginAttempt(models.Model):
+    username = models.CharField(max_length=255)
+    ip_address = models.GenericIPAddressField()
+    attempt_time = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-attempt_time']
+    
+    @classmethod
+    def cleanup_old_attempts(cls):
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.conf import settings
+        
+        # Remove attempts older than the timeout period
+        expiration = timezone.now() - timedelta(seconds=settings.LOGIN_ATTEMPT_TIMEOUT)
+        cls.objects.filter(attempt_time__lt=expiration).delete()
+    
+    @classmethod
+    def get_recent_attempts(cls, username, ip_address):
+        cls.cleanup_old_attempts()
+        return cls.objects.filter(
+            username=username,
+            ip_address=ip_address,
+            attempt_time__gte=timezone.now() - timedelta(seconds=settings.LOGIN_ATTEMPT_TIMEOUT)
+        ).count()

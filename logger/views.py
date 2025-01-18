@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.db.models import Count
 from django.utils import timezone
-from .models import QSOLog, UserDefaults, SavedInput
+from .models import QSOLog, UserDefaults, SavedInput, LoginAttempt
 from .forms import ExtendedUserCreationForm, ProfileForm
 from .utils import (
     callsign_pattern,
@@ -19,31 +19,55 @@ from .utils import (
     band_pattern,
     date_pattern,
 )
+from django.contrib.auth.views import LoginView
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.contrib.sites.shortcuts import get_current_site
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.contrib.auth.tokens import default_token_generator
+from django.urls import reverse
+from django.conf import settings
+from django.contrib.auth import login
+from django.contrib.auth.models import User
 import re
 import datetime
 import csv
 import adif_io
+import random
+import string
 
 
 def signup(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         form = ExtendedUserCreationForm(request.POST)
         if form.is_valid():
-            try:
-                form.save()
-                messages.success(
-                    request, "Account created successfully. Please log in."
-                )
-                return redirect("login")
-            except Exception as e:
-                messages.error(request, f"Error creating account: {str(e)}")
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
+            user = form.save()
+            
+            # Send welcome email
+            current_site = get_current_site(request)
+            site_url = f"https://{current_site.domain}"
+            
+            email_html = render_to_string('logger/email/welcome.html', {
+                'user': user,
+                'site_url': site_url,
+            })
+            
+            send_mail(
+                'Welcome to FLEW!',
+                '',  # Plain text version (empty as we're sending HTML)
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                html_message=email_html,
+                fail_silently=False,
+            )
+            
+            login(request, user)
+            messages.success(request, "Account created successfully! Welcome to FLEW!")
+            return redirect('index')
     else:
         form = ExtendedUserCreationForm()
-    return render(request, "registration/signup.html", {"form": form})
+    return render(request, 'registration/signup.html', {'form': form})
 
 
 def index(request):
@@ -740,3 +764,120 @@ def save_qsos(request):
 
 def help(request):
     return render(request, "logger/help.html")
+
+
+class CustomLoginView(LoginView):
+    template_name = 'registration/login.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.session.get('show_captcha', False):
+            # Generate a simple captcha
+            captcha = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            self.request.session['captcha'] = captcha
+            context['show_captcha'] = True
+            context['captcha'] = captcha
+        return context
+    
+    def form_valid(self, form):
+        username = form.cleaned_data.get('username')
+        ip_address = self.request.META.get('REMOTE_ADDR')
+        
+        # Check captcha if required
+        if self.request.session.get('show_captcha', False):
+            user_captcha = self.request.POST.get('captcha')
+            stored_captcha = self.request.session.get('captcha')
+            if user_captcha != stored_captcha:
+                form.add_error(None, "Invalid captcha. Please try again.")
+                return self.form_invalid(form)
+        
+        # Check login attempts
+        attempts = LoginAttempt.get_recent_attempts(username, ip_address)
+        if attempts >= settings.MAX_LOGIN_ATTEMPTS:
+            self.request.session['show_captcha'] = True
+            form.add_error(None, "Too many login attempts. Please solve the captcha.")
+            return self.form_invalid(form)
+        
+        response = super().form_valid(form)
+        
+        # Clear any failed attempts and captcha requirement on successful login
+        LoginAttempt.objects.filter(username=username, ip_address=ip_address).delete()
+        self.request.session['show_captcha'] = False
+        
+        return response
+    
+    def form_invalid(self, form):
+        username = form.cleaned_data.get('username')
+        ip_address = self.request.META.get('REMOTE_ADDR')
+        
+        # Record failed attempt
+        LoginAttempt.objects.create(
+            username=username,
+            ip_address=ip_address
+        )
+        
+        return super().form_invalid(form)
+
+def forgot_password(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        try:
+            user = User.objects.get(email=email)
+            current_site = get_current_site(request)
+            site_url = f"https://{current_site.domain}"
+            
+            # Generate password reset token
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Build reset URL
+            reset_url = f"{site_url}{reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})}"
+            
+            # Render email template
+            email_html = render_to_string('logger/email/password_reset.html', {
+                'user': user,
+                'reset_url': reset_url,
+            })
+            
+            # Send email
+            send_mail(
+                'Reset Your FLEW Password',
+                '',  # Plain text version (empty as we're sending HTML)
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                html_message=email_html,
+                fail_silently=False,
+            )
+            
+            messages.success(request, "Password reset instructions have been sent to your email.")
+            return redirect('login')
+            
+        except User.DoesNotExist:
+            messages.error(request, "No user found with that email address.")
+    
+    return render(request, 'registration/forgot_password.html')
+
+def password_reset_confirm(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            password = request.POST.get('password')
+            password_confirm = request.POST.get('password_confirm')
+            
+            if password == password_confirm:
+                user.set_password(password)
+                user.save()
+                messages.success(request, "Your password has been reset successfully.")
+                return redirect('login')
+            else:
+                messages.error(request, "Passwords do not match.")
+        
+        return render(request, 'registration/password_reset_confirm.html')
+    else:
+        messages.error(request, "The password reset link is invalid or has expired.")
+        return redirect('login')

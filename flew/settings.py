@@ -164,3 +164,17 @@ LOGIN_URL = "login"
 LOCALE_PATHS = [
     BASE_DIR / "locale",
 ]
+
+# Email Configuration
+EMAIL_BACKEND = 'django_mailjet.backends.MailjetBackend'
+MAILJET_API_KEY = env('MAILJET_API_KEY', default='')
+MAILJET_API_SECRET = env('MAILJET_API_SECRET', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Fast Log Entry Web <noreply@logs.cqcq.lt>')
+DEFAULT_FROM_NAME = env('DEFAULT_FROM_NAME', default='FLEW')
+
+# Password Reset Settings
+PASSWORD_RESET_TIMEOUT = 86400  # 24 hours in seconds
+
+# Login Attempt Settings
+MAX_LOGIN_ATTEMPTS = 3
+LOGIN_ATTEMPT_TIMEOUT = 300  # 5 minutes in seconds

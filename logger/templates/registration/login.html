@@ -1,4 +1,5 @@
 {% extends "logger/base.html" %}
+{% load static %}
 
 {% block content %}
 <div class="container mt-5">
@@ -6,24 +7,75 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h4>Log In</h4>
+                    <h4 class="mb-0">Log In</h4>
                 </div>
                 <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
                     <form method="post">
                         {% csrf_token %}
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
                         <div class="mb-3">
-                            <label for="id_username" class="form-label">Username</label>
-                            <input type="text" name="username" class="form-control" id="id_username" required>
+                            <label for="username" class="form-label">Email</label>
+                            <input type="email" class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                   id="username" name="username" required>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.username.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
+                        
                         <div class="mb-3">
-                            <label for="id_password" class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" id="id_password" required>
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}" 
+                                   id="password" name="password" required>
+                            {% if form.password.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.password.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
-                        <button type="submit" class="btn btn-primary">Log In</button>
+                        
+                        {% if show_captcha %}
+                            <div class="mb-3">
+                                <label for="captcha" class="form-label">Enter the code shown below</label>
+                                <input type="text" class="form-control" id="captcha" name="captcha" required>
+                                <div class="mt-2">
+                                    <code style="font-size: 1.2em; letter-spacing: 3px; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">
+                                        {{ captcha }}
+                                    </code>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Log In</button>
+                        </div>
+                        
+                        <div class="mt-3 text-center">
+                            <a href="{% url 'forgot_password' %}" class="text-decoration-none">Forgot Password?</a>
+                            <span class="mx-2">|</span>
+                            <a href="{% url 'signup' %}" class="text-decoration-none">Sign Up</a>
+                        </div>
                     </form>
-                    <p class="mt-3">
-                        Don't have an account? <a href="{% url 'signup' %}">Sign up</a>
-                    </p>
                 </div>
             </div>
         </div>

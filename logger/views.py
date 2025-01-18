@@ -29,9 +29,16 @@ def signup(request):
     if request.method == "POST":
         form = ExtendedUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Account created successfully. Please log in.")
-            return redirect("login")
+            try:
+                form.save()
+                messages.success(request, "Account created successfully. Please log in.")
+                return redirect("login")
+            except Exception as e:
+                messages.error(request, f"Error creating account: {str(e)}")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = ExtendedUserCreationForm()
     return render(request, "registration/signup.html", {"form": form})

@@ -1,25 +1,23 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 import re
 from .utils import grid_pattern, callsign_pattern
 from .models import UserDefaults
 
 
-class ExtendedUserCreationForm(UserCreationForm):
+class ExtendedUserCreationForm(forms.ModelForm):
     email = forms.EmailField(
         max_length=254,
         help_text="Required. Enter a valid email address.",
-        widget=forms.EmailInput(
-            attrs={"class": "form-control", "placeholder": "Email"}
-        ),
+        widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "Email"}),
     )
     password1 = forms.CharField(
         label="Password",
-        widget=forms.PasswordInput(
-            attrs={"class": "form-control", "placeholder": "Password"}
-        ),
+        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Password"}),
+        help_text="Your password must contain at least 8 characters.",
     )
 
     def clean_email(self):
@@ -28,10 +26,16 @@ class ExtendedUserCreationForm(UserCreationForm):
             raise ValidationError("This email is already registered.")
         return email
 
+    def clean_password1(self):
+        password = self.cleaned_data.get("password1")
+        validate_password(password)
+        return password
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.username = self.cleaned_data["email"]
         user.email = self.cleaned_data["email"]
+        user.set_password(self.cleaned_data["password1"])
         if commit:
             user.save()
             UserDefaults.objects.create(user=user)
@@ -44,7 +48,7 @@ class ExtendedUserCreationForm(UserCreationForm):
 
 class ProfileForm(forms.ModelForm):
     station_callsign = forms.CharField(max_length=20, required=False)
-    my_gridsquare = forms.CharField(max_length=6, required=False)
+    my_gridsquare = forms.CharField(max_length=8, required=False)
 
     def clean_station_callsign(self):
         callsign = self.cleaned_data["station_callsign"]

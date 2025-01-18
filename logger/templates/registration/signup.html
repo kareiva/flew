@@ -10,6 +10,24 @@
                     <h4 class="mb-0">Sign Up</h4>
                 </div>
                 <div class="card-body">
+                    {% if messages %}
+                    <div class="messages mb-3">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
                     <form method="post">
                         {% csrf_token %}
                         
@@ -18,6 +36,11 @@
                             {% if form.email.errors %}
                                 <div class="text-danger">
                                     {{ form.email.errors }}
+                                </div>
+                            {% endif %}
+                            {% if form.email.help_text %}
+                                <div class="form-text">
+                                    {{ form.email.help_text }}
                                 </div>
                             {% endif %}
                         </div>
@@ -29,9 +52,11 @@
                                     {{ form.password1.errors }}
                                 </div>
                             {% endif %}
-                            <div class="form-text">
-                                {{ form.password1.help_text }}
-                            </div>
+                            {% if form.password1.help_text %}
+                                <div class="form-text">
+                                    {{ form.password1.help_text }}
+                                </div>
+                            {% endif %}
                         </div>
 
                         <div class="d-grid gap-2">

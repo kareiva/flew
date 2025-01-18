@@ -12,11 +12,15 @@ class ExtendedUserCreationForm(forms.ModelForm):
     email = forms.EmailField(
         max_length=254,
         help_text="Required. Enter a valid email address.",
-        widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "Email"}),
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "placeholder": "Email"}
+        ),
     )
     password1 = forms.CharField(
         label="Password",
-        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Password"}),
+        widget=forms.PasswordInput(
+            attrs={"class": "form-control", "placeholder": "Password"}
+        ),
         help_text="Your password must contain at least 8 characters.",
     )
 

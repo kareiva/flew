@@ -16,8 +16,8 @@ import environ
 
 env = environ.Env(
     DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
-    DATABASE_URL=(str, 'sqlite:///db.sqlite3'),
+    ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
+    DATABASE_URL=(str, "sqlite:///db.sqlite3"),
 )
 environ.Env.read_env()
 
@@ -29,14 +29,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
-                 
+SECRET_KEY = env("SECRET_KEY")
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = env('ALLOWED_HOSTS')
+ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 
-CSRF_TRUSTED_ORIGINS = ['https://logs.cqcq.lt']
+CSRF_TRUSTED_ORIGINS = ["https://logs.cqcq.lt"]
 
 # Application definition
 
@@ -87,9 +87,8 @@ WSGI_APPLICATION = "flew.wsgi.application"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db(),
+    "default": env.db(),
 }
-
 
 
 # Password validation

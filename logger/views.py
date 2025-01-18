@@ -31,7 +31,9 @@ def signup(request):
         if form.is_valid():
             try:
                 form.save()
-                messages.success(request, "Account created successfully. Please log in.")
+                messages.success(
+                    request, "Account created successfully. Please log in."
+                )
                 return redirect("login")
             except Exception as e:
                 messages.error(request, f"Error creating account: {str(e)}")

@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,7 +26,10 @@ SECRET_KEY = "django-insecure-j=xfzbf4!6b=3=_-8x=7dnsinv&=xprq3js2$a(3&2_0misxkw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['flew.cqcq.lt']
+ALLOWED_HOSTS = []
+
+if "ALLOWED_HOSTS" in os.environ:
+    ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(' ')
 
 
 # Application definition

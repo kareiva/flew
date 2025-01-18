@@ -1,115 +1,173 @@
 <!DOCTYPE html>
-{% load i18n %}
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% trans "FLEW - Free Log Entry for the Web" %}</title>
+    <title>Fast Log Entry (Web)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0,0,0,.1);
+            border: 1px solid rgba(0,0,0,.125);
+            border-radius: 10px;
+        }
+        .form-control {
+            border-radius: 8px;
+        }
+        .btn {
+            border-radius: 8px;
+        }
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0;
+            background-color: var(--bs-body-bg);
+            border-top: 1px solid var(--bs-border-color);
+        }
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #1a1a1a;
+            --bs-body-color: #e0e0e0;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'index' %}">FLEW</a>
+            <a class="navbar-brand" href="{% url 'index' %}">Fast Log Entry (Web)</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            {% get_current_language as LANGUAGE_CODE %}
-                            {% if LANGUAGE_CODE == 'en' %}
-                                🇬🇧
-                            {% elif LANGUAGE_CODE == 'lt' %}
-                                🇱🇹
-                            {% elif LANGUAGE_CODE == 'ru' %}
-                                🇷🇺
-                            {% else %}
-                                🌐
-                            {% endif %}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <form action="{% url 'set_language' %}" method="post" id="language-form">
-                                {% csrf_token %}
-                                <input name="next" type="hidden" value="{{ request.path }}">
-                                {% get_available_languages as LANGUAGES %}
-                                {% for lang_code, lang_name in LANGUAGES %}
-                                    <li>
-                                        <button type="submit" name="language" value="{{ lang_code }}" 
-                                                class="dropdown-item {% if lang_code == LANGUAGE_CODE %}active{% endif %}">
-                                            {% if lang_code == 'en' %}
-                                                🇬🇧
-                                            {% elif lang_code == 'lt' %}
-                                                🇱🇹
-                                            {% elif lang_code == 'ru' %}
-                                                🇷🇺
-                                            {% else %}
-                                                🌐
-                                            {% endif %}
-                                            {{ lang_name }}
-                                        </button>
-                                    </li>
-                                {% endfor %}
-                            </form>
-                        </ul>
-                    </li>
+                <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'help' %}">Help</a>
                     </li>
                     {% if user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                {% trans "Export" %}
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'export_adif' %}">ADIF</a></li>
-                                <li><a class="dropdown-item" href="{% url 'export_csv' %}">CSV</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'profile' %}">{{ user.username }}</a>
-                        </li>
-                        <li class="nav-item">
-                            <form method="post" action="{% url 'logout' %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-link nav-link">{% trans "Logout" %}</button>
-                            </form>
-                        </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            Export
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'export_adif' %}">ADIF</a></li>
+                            <li><a class="dropdown-item" href="{% url 'export_csv' %}">CSV</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="btn btn-link nav-link" id="theme-toggle">
+                            <span class="theme-icon-light">☀️</span>
+                            <span class="theme-icon-dark d-none">🌙</span>
+                        </button>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            {% if LANGUAGE_CODE == 'en' %}
+                            🇬🇧
+                            {% elif LANGUAGE_CODE == 'lt' %}
+                            🇱🇹
+                            {% elif LANGUAGE_CODE == 'pl' %}
+                            🇵🇱
+                            {% else %}
+                            🌐
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/en/">🇬🇧 English</a></li>
+                            <li><a class="dropdown-item" href="/lt/">🇱🇹 Lithuanian</a></li>
+                            <li><a class="dropdown-item" href="/pl/">🇵🇱 Polish</a></li>
+                        </ul>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'profile' %}">Profile {# user.username #}</a>
+                    </li>
+                    <li class="nav-item">
+                        <form method="post" action="{% url 'logout' %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link nav-link">Logout</button>
+                        </form>
+                    </li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">{% trans "Login" %}</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'signup' %}">{% trans "Sign Up" %}</a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'signup' %}">Sign Up</a>
+                    </li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
 
-    {% if messages %}
-    <div class="container mt-3">
+    <div class="container my-4">
+        {% if messages %}
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
             {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
     </div>
-    {% endif %}
 
-    {% block content %}{% endblock %}
+    <footer class="footer text-center">
+        <div class="container">
+            <p class="mb-0">© {% now "Y" %} Simonas Kareiva LY2EN. All rights reserved.</p>
+        </div>
+    </footer>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Auto-submit language form when selection changes
-        document.querySelectorAll('#language-form button').forEach(button => {
-            button.addEventListener('click', function() {
-                this.form.submit();
+        // Theme toggler
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const lightIcon = themeToggle.querySelector('.theme-icon-light');
+            const darkIcon = themeToggle.querySelector('.theme-icon-dark');
+            
+            // Check for saved theme preference or use system preference
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-bs-theme', savedTheme);
+                updateThemeIcon(savedTheme);
+            } else {
+                const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-bs-theme', systemTheme);
+                updateThemeIcon(systemTheme);
+            }
+
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon(newTheme);
             });
+
+            function updateThemeIcon(theme) {
+                if (theme === 'dark') {
+                    lightIcon.classList.add('d-none');
+                    darkIcon.classList.remove('d-none');
+                } else {
+                    lightIcon.classList.remove('d-none');
+                    darkIcon.classList.add('d-none');
+                }
+            }
         });
     </script>
     {% block extra_js %}{% endblock %}

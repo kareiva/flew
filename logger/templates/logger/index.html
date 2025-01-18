@@ -1,207 +1,214 @@
 {% extends "logger/base.html" %}
-{% load widget_tweaks %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Free Text Input</h5>
-                </div>
-                <div class="card-body">
-                    <textarea id="qso-input" class="form-control" rows="10" placeholder="Enter QSO data here...">{% if initial_input %}{{ initial_input.input_text }}{% endif %}</textarea>
-                    <div class="mt-3">
-                        <div class="input-group">
-                            <input type="text" id="save-name" class="form-control" placeholder="Enter a name for this input" {% if not user.is_authenticated %}disabled{% endif %}>
-                            <button class="btn btn-primary" id="save-input" {% if not user.is_authenticated %}onclick="window.location.href='{% url 'signup' %}'"{% endif %}>
-                                {% if user.is_authenticated %}Save{% else %}Sign Up to Save{% endif %}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">ADIF Output</h5>
-                </div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <textarea class="form-control" id="adif_output" rows="10" readonly>{% if initial_input %}{{ initial_input.adif_text }}{% endif %}</textarea>
-                        <div class="mt-2">
-                            <button type="button" class="btn btn-primary" {% if user.is_authenticated %}onclick="saveQSOs()"{% else %}onclick="window.location.href='{% url 'signup' %}'"{% endif %}>
-                                {% if user.is_authenticated %}Save QSOs to Log{% else %}Sign Up to Save QSOs{% endif %}
-                            </button>
-                        </div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Free Text Input</h5>
+                <textarea id="text-input" class="form-control mb-3" rows="10" placeholder="Enter your QSO data here...">{% if initial_input %}{{ initial_input.input_text }}{% endif %}</textarea>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="input-group" style="max-width: 300px;">
+                        <input type="text" id="save-name" class="form-control" placeholder="Name for saved input" {% if not user.is_authenticated %}disabled{% endif %}>
+                        <button id="save-input" class="btn btn-outline-primary" {% if not user.is_authenticated %}onclick="window.location.href='{% url 'signup' %}'"{% endif %}>
+                            {% if user.is_authenticated %}Save Input{% else %}Sign Up to Save{% endif %}
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="row">
-        <div class="col">
-            <div class="alert alert-info">
-                <h5 class="mb-3">Quick Guide</h5>
-                <p>Enter your QSO data in free text format. Here are some examples:</p>
-                <pre class="mb-3">
-2024-01-20                    # Set date for subsequent QSOs
-14.074 ly1abc 599            # Frequency before callsign, RST after
-58 ly2xyz                    # Minute before callsign (sets time to HH:58)
-ly3def ,001 .002            # Sent exchange 001, received exchange 002
-ly4ghi 7                    # Single digit 7 sets RST to 57 (phone) or 579 (CW)</pre>
-                <p>For more examples and detailed instructions, check out the <a href="{% url 'help' %}">Help page</a>.</p>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">ADIF Output</h5>
+                <textarea id="adif-output" class="form-control" rows="10" readonly>{% if initial_input %}{{ initial_input.adif_text }}{% endif %}</textarea>
+                <div class="mt-2">
+                    <button id="save-qsos" class="btn btn-primary" {% if not user.is_authenticated %}onclick="window.location.href='{% url 'signup' %}'"{% endif %}>
+                        {% if user.is_authenticated %}Save to Log{% else %}Sign Up to Log{% endif %}
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const qsoInput = document.getElementById('qso-input');
-    const adifOutput = document.getElementById('adif_output');
-    const saveNameInput = document.getElementById('save-name');
-    const saveButton = document.getElementById('save-input');
-    let typingTimer;
+<div class="row">
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">QSO Data</h5>
+                <div class="table-responsive">
+                    <table id="qso-table" class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Call</th>
+                                <th>Band</th>
+                                <th>Freq</th>
+                                <th>Mode</th>
+                                <th>RST Sent</th>
+                                <th>RST Rcvd</th>
+                                <th>Grid</th>
+                                <th>STX</th>
+                                <th>SRX</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    function updateAdif() {
-        const text = qsoInput.value;
-        if (!text.trim()) {
-            adifOutput.value = '';
-            return;
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h5 class="mb-3">Quick Guide</h5>
+            <p>Examples:</p>
+            <ul>
+                <li>2024-01-20 - Set date for subsequent QSOs</li>
+                <li>14.074 ly1abc 599 - Frequency before callsign, RST after</li>
+                <li>58 ly2xyz - Minute before callsign (sets time to HH:58)</li>
+                <li>ly3def ,001 .002 - Sent exchange 001, received exchange 002</li>
+                <li>ly4ghi 7 - Single digit 7 sets RST to 57 (phone) or 579 (CW)</li>
+            </ul>
+            <p>For more detailed help, check out the <a href="{% url 'help' %}">Help page</a>.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        let qsoTable = $('#qso-table').DataTable({
+            paging: false,
+            searching: false,
+            info: false,
+            colResize: {
+                isEnabled: true,
+                hoverClass: 'dt-colresizable-hover',
+                hasBoundCheck: true,
+                minBoundClass: 'dt-colresizable-bound-min',
+                maxBoundClass: 'dt-colresizable-bound-max'
+            },
+            columns: [
+                { data: 'qso_date', defaultContent: '' },
+                { data: 'time_on', defaultContent: '' },
+                { data: 'call', defaultContent: '' },
+                { data: 'band', defaultContent: '' },
+                { data: 'freq', defaultContent: '' },
+                { data: 'mode', defaultContent: '' },
+                { data: 'rst_sent', defaultContent: '' },
+                { data: 'rst_rcvd', defaultContent: '' },
+                { data: 'gridsquare', defaultContent: '' },
+                { data: 'stx', defaultContent: '' },
+                { data: 'srx', defaultContent: '' }
+            ]
+        });
+
+        function parseAdifToTable(adifText) {
+            let qsos = [];
+            let lines = adifText.split('<EOR>');
+            
+            lines.forEach(line => {
+                if (line.trim()) {
+                    let qso = {};
+                    let matches = line.matchAll(/<(\w+):(\d+)>([^<]+)/g);
+                    for (const match of matches) {
+                        qso[match[1].toLowerCase()] = match[3];
+                    }
+                    qsos.push(qso);
+                }
+            });
+            
+            return qsos;
         }
 
-        fetch('{% url "parse_text" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: 'text=' + encodeURIComponent(text)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.adif) {
-                adifOutput.value = data.adif;
-            } else {
-                adifOutput.value = 'Error parsing input';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            adifOutput.value = 'Error communicating with server';
-        });
-    }
+        function updateQsoTable(adifText) {
+            let qsos = parseAdifToTable(adifText);
+            qsoTable.clear();
+            qsoTable.rows.add(qsos).draw();
+        }
 
-    qsoInput.addEventListener('input', function() {
-        clearTimeout(typingTimer);
-        typingTimer = setTimeout(updateAdif, 500);
-    });
+        // Initial table population if there's data
+        let initialAdif = $('#adif-output').val();
+        if (initialAdif) {
+            updateQsoTable(initialAdif);
+        }
 
-    if (saveButton) {
-        saveButton.addEventListener('click', function() {
-            const name = saveNameInput.value.trim();
-            const inputText = qsoInput.value.trim();
-            const adifText = adifOutput.value.trim();
+        // Update table when ADIF output changes
+        let textInput = $('#text-input');
+        let adifOutput = $('#adif-output');
 
-            if (!name) {
-                alert('Please enter a name for this input');
-                return;
-            }
-
-            if (!inputText) {
-                alert('Please enter some QSO data');
-                return;
-            }
-
-            fetch('{% url "save_input" %}', {
+        textInput.on('input', function() {
+            $.ajax({
+                url: '{% url "parse_text" %}',
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': '{{ csrf_token }}'
+                data: {
+                    text: $(this).val(),
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
                 },
-                body: 'name=' + encodeURIComponent(name) + 
-                      '&input_text=' + encodeURIComponent(inputText) +
-                      '&adif_text=' + encodeURIComponent(adifText)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    saveNameInput.value = '';
-                    qsoInput.value = data.input_text;
-                    adifOutput.value = data.adif_text;
-                    window.location.reload();
-                } else {
-                    alert('Error saving input');
+                success: function(response) {
+                    adifOutput.val(response.adif);
+                    updateQsoTable(response.adif);
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error communicating with server');
             });
         });
-    }
 
-    // Initial update if there's text in the input
-    if (qsoInput.value.trim()) {
-        updateAdif();
-    }
-});
-
-function saveQSOs() {
-    const adifText = document.getElementById('adif_output').value;
-    if (!adifText) {
-        alert('No QSOs to save');
-        return;
-    }
-
-    fetch('{% url "save_qsos" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: 'adif_text=' + encodeURIComponent(adifText)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'success') {
-            alert(data.message);
-            // Clear the input and output areas after successful save
-            document.getElementById('qso-input').value = '';
-            document.getElementById('adif_output').value = '';
-        } else {
-            console.error('Save QSOs Error:', data.message);
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Save QSOs Error:', error);
-        alert('Error saving QSOs. Please check the console for details.');
-    });
-}
-
-// Add CSRF token helper function if not already present
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+        $('#save-input').click(function() {
+            if (!$(this).is('[onclick]')) {  // Only proceed if not redirecting to signup
+                let name = $('#save-name').val();
+                if (!name) {
+                    alert('Please enter a name for your saved input');
+                    return;
+                }
+                $.ajax({
+                    url: '{% url "save_input" %}',
+                    method: 'POST',
+                    data: {
+                        name: name,
+                        input_text: textInput.val(),
+                        adif_text: adifOutput.val(),
+                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            window.location.href = '{% url "profile" %}';
+                        }
+                    }
+                });
             }
-        }
-    }
-    return cookieValue;
-}
+        });
+
+        $('#save-qsos').click(function() {
+            if (!$(this).is('[onclick]')) {  // Only proceed if not redirecting to signup
+                $.ajax({
+                    url: '{% url "save_qsos" %}',
+                    method: 'POST',
+                    data: {
+                        adif_text: adifOutput.val(),
+                        csrfmiddlewaretoken: '{{ csrf_token }}'
+                    },
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            textInput.val('');
+                            adifOutput.val('');
+                            qsoTable.clear().draw();
+                            alert(response.message);
+                        } else {
+                            alert(response.message);
+                        }
+                    }
+                });
+            }
+        });
+    });
 </script>
 {% endblock %} 

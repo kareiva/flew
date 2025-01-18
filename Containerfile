@@ -5,12 +5,11 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Set environment variables for PostgreSQL connection
-ENV DB_NAME=your_db_name
-ENV DB_USER=your_db_user
-ENV DB_PASSWORD=your_db_password
-ENV DB_HOST=flewdb
-ENV DB_PORT=5432
+# Set environment variables for Django and Database
+ENV SECRET_KEY=change-me-in-production
+ENV DEBUG=False
+ENV ALLOWED_HOSTS=localhost
+ENV DATABASE_URL=postgres://user:password@flewdb:5432/dbname
 
 # Set the working directory
 WORKDIR /app
